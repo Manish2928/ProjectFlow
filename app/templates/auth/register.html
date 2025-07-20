@@ -1,0 +1,146 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Register - Project Management Tool{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="container-fluid vh-100">
+        <div class="row h-100">
+            <!-- Left Side - Registration Form -->
+            <div class="col-md-6 d-flex align-items-center justify-content-center">
+                <div class="auth-form">
+                    <div class="text-center mb-4">
+                        <h1 class="h3 mb-3 fw-normal">
+                            <i class="fas fa-project-diagram text-primary me-2"></i>
+                            ProjectFlow
+                        </h1>
+                        <p class="text-muted">Create your account</p>
+                    </div>
+                    
+                    <form method="POST" class="needs-validation" novalidate>
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.first_name.id }}" class="form-label">First Name</label>
+                                {{ form.first_name(class="form-control") }}
+                                {% if form.first_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.first_name.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.last_name.id }}" class="form-label">Last Name</label>
+                                {{ form.last_name(class="form-control") }}
+                                {% if form.last_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.last_name.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.username.id }}" class="form-label">Username</label>
+                            {{ form.username(class="form-control") }}
+                            {% if form.username.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.username.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.email.id }}" class="form-label">Email</label>
+                            {{ form.email(class="form-control") }}
+                            {% if form.email.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.email.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.password.id }}" class="form-label">Password</label>
+                            {{ form.password(class="form-control") }}
+                            {% if form.password.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.password.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.confirm_password.id }}" class="form-label">Confirm Password</label>
+                            {{ form.confirm_password(class="form-control") }}
+                            {% if form.confirm_password.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.confirm_password.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <button class="btn btn-primary btn-lg w-100" type="submit">
+                            <i class="fas fa-user-plus me-2"></i>
+                            Create Account
+                        </button>
+                    </form>
+                    
+                    <div class="text-center mt-3">
+                        <p class="text-muted">
+                            Already have an account? 
+                            <a href="{{ url_for('auth.login') }}" class="text-primary">Sign in here</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Side - Hero Section -->
+            <div class="col-md-6 auth-hero d-none d-md-flex align-items-center justify-content-center">
+                <div class="text-center text-white">
+                    <h2 class="display-4 fw-bold mb-3">Join Us Today!</h2>
+                    <p class="lead mb-4">
+                        Start managing your projects more efficiently with our powerful tools.
+                    </p>
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="feature-item">
+                                <i class="fas fa-rocket fa-2x mb-2"></i>
+                                <h5>Get Started Quickly</h5>
+                                <p>Set up your projects in minutes</p>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="feature-item">
+                                <i class="fas fa-shield-alt fa-2x mb-2"></i>
+                                <h5>Secure & Reliable</h5>
+                                <p>Your data is protected with us</p>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="feature-item">
+                                <i class="fas fa-mobile-alt fa-2x mb-2"></i>
+                                <h5>Mobile Friendly</h5>
+                                <p>Access your projects from anywhere</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

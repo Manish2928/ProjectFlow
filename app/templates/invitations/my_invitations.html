@@ -1,0 +1,96 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}My Invitations - Project Management Tool{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">
+            <i class="fas fa-envelope me-2"></i>
+            My Invitations
+        </h1>
+    </div>
+    
+    {% if invitations %}
+        <div class="row g-4">
+            {% for invitation in invitations %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-project-diagram me-2 text-primary"></i>
+                            {{ invitation.project.title }}
+                        </h5>
+                        <p class="card-text">
+                            <strong>From:</strong> {{ invitation.inviter.get_full_name() }}<br>
+                            <strong>Role:</strong> 
+                            <span class="badge bg-{{ 'info' if invitation.role == 'member' else 'secondary' }}">
+                                {{ invitation.role.title() }}
+                            </span><br>
+                            <strong>Invited:</strong> {{ invitation.created_at.strftime('%B %d, %Y at %I:%M %p') }}
+                        </p>
+                        
+                        {% if invitation.message %}
+                        <div class="alert alert-light">
+                            <small><strong>Message:</strong> {{ invitation.message }}</small>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button class="btn btn-outline-danger me-md-2" onclick="respondToInvitation({{ invitation.id }}, 'decline')">
+                                <i class="fas fa-times me-1"></i>
+                                Decline
+                            </button>
+                            <button class="btn btn-success" onclick="respondToInvitation({{ invitation.id }}, 'accept')">
+                                <i class="fas fa-check me-1"></i>
+                                Accept
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-envelope-open fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No pending invitations</h5>
+            <p class="text-muted">You don't have any pending project invitations at the moment.</p>
+            <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">
+                <i class="fas fa-arrow-left me-1"></i>
+                Back to Dashboard
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function respondToInvitation(invitationId, response) {
+    fetch(`/invitations/respond/${invitationId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ response: response })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (data.redirect) {
+                window.location.href = data.redirect;
+            } else {
+                location.reload();
+            }
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while responding to the invitation.');
+    });
+}
+</script>
+{% endblock %}

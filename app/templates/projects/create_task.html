@@ -1,0 +1,172 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Create Task - {{ project.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">
+            <i class="fas fa-plus-circle me-2"></i>
+            Create New Task
+        </h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <div class="btn-group me-2">
+                <a href="{{ url_for('projects.view', project_id=project.id) }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    Back to Project
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-tasks me-2"></i>
+                        New Task for: {{ project.title }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" class="needs-validation" novalidate>
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.title.id }}" class="form-label">
+                                <i class="fas fa-heading me-1"></i>
+                                Task Title *
+                            </label>
+                            {{ form.title(class="form-control form-control-lg", placeholder="Enter task title...") }}
+                            {% if form.title.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.title.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.description.id }}" class="form-label">
+                                <i class="fas fa-align-left me-1"></i>
+                                Description
+                            </label>
+                            {{ form.description(class="form-control", rows="4", placeholder="Describe the task requirements, deliverables, and any important notes...") }}
+                            {% if form.description.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.description.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.status.id }}" class="form-label">
+                                    <i class="fas fa-flag me-1"></i>
+                                    Status
+                                </label>
+                                {{ form.status(class="form-select") }}
+                                {% if form.status.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.status.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.priority.id }}" class="form-label">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    Priority
+                                </label>
+                                {{ form.priority(class="form-select") }}
+                                {% if form.priority.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.priority.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.assigned_to.id }}" class="form-label">
+                                    <i class="fas fa-user me-1"></i>
+                                    Assign To
+                                </label>
+                                {{ form.assigned_to(class="form-select") }}
+                                {% if form.assigned_to.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.assigned_to.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.due_date.id }}" class="form-label">
+                                    <i class="fas fa-calendar-times me-1"></i>
+                                    Due Date
+                                </label>
+                                {{ form.due_date(class="form-control", type="date") }}
+                                {% if form.due_date.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.due_date.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="{{ form.estimated_hours.id }}" class="form-label">
+                                <i class="fas fa-clock me-1"></i>
+                                Estimated Hours
+                            </label>
+                            <div class="input-group">
+                                {{ form.estimated_hours(class="form-control", placeholder="0") }}
+                                <span class="input-group-text">hours</span>
+                            </div>
+                            {% if form.estimated_hours.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.estimated_hours.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('projects.view', project_id=project.id) }}" class="btn btn-outline-secondary me-md-2">
+                                <i class="fas fa-times me-1"></i>
+                                Cancel
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save me-1"></i>
+                                Create Task
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Set minimum due date to today
+document.addEventListener('DOMContentLoaded', function() {
+    const dueDateInput = document.getElementById('{{ form.due_date.id }}');
+    const today = new Date().toISOString().split('T')[0];
+    dueDateInput.min = today;
+});
+</script>
+{% endblock %}

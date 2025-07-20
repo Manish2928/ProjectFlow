@@ -1,0 +1,2559 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ project.title }} - Canvas</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* Enhanced Canvas Styles with Dark Mode Support */
+        :root {
+            --canvas-bg: #ffffff;
+            --canvas-text: #333333;
+            --canvas-border: #e9ecef;
+            --canvas-hover: #f8f9fa;
+            --canvas-primary: #007bff;
+            --canvas-secondary: #6c757d;
+            --canvas-panel-bg: #ffffff;
+            --canvas-input-bg: #ffffff;
+            --canvas-shadow: rgba(0,0,0,0.1);
+        }
+
+        [data-theme="dark"] {
+            --canvas-bg: #1a1a1a;
+            --canvas-text: #ffffff;
+            --canvas-border: #404040;
+            --canvas-hover: #2d2d2d;
+            --canvas-primary: #0d6efd;
+            --canvas-secondary: #adb5bd;
+            --canvas-panel-bg: #2d2d2d;
+            --canvas-input-bg: #404040;
+            --canvas-shadow: rgba(0,0,0,0.3);
+        }
+
+        .canvas-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: var(--canvas-hover);
+            overflow: hidden;
+            color: var(--canvas-text);
+        }
+
+        .canvas-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 16px;
+            background: var(--canvas-panel-bg);
+            border-bottom: 1px solid var(--canvas-border);
+            box-shadow: 0 1px 3px var(--canvas-shadow);
+            z-index: 1000;
+        }
+
+        .canvas-header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .canvas-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0;
+            padding: 4px 8px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            background: transparent;
+            outline: none;
+            color: var(--canvas-text);
+        }
+
+        .canvas-title:hover {
+            background: var(--canvas-hover);
+            border-color: var(--canvas-border);
+        }
+
+        .auto-save-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--canvas-secondary);
+        }
+
+        .auto-save-indicator.saving {
+            color: var(--canvas-primary);
+        }
+
+        .auto-save-indicator.error {
+            color: #dc3545;
+        }
+
+        .canvas-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--canvas-panel-bg);
+            border-bottom: 1px solid var(--canvas-border);
+            flex-wrap: wrap;
+        }
+
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 0 8px;
+            border-right: 1px solid var(--canvas-border);
+        }
+
+        .toolbar-group:last-child {
+            border-right: none;
+        }
+
+        .tool-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border: 1px solid transparent;
+            background: transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--canvas-text);
+        }
+
+        .tool-btn:hover {
+            background: var(--canvas-hover);
+            border-color: var(--canvas-border);
+        }
+
+        .tool-btn.active {
+            background: var(--canvas-primary);
+            color: white;
+            border-color: var(--canvas-primary);
+        }
+
+        .zoom-level {
+            font-size: 12px;
+            color: var(--canvas-secondary);
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .canvas-main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .canvas-workspace {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: var(--canvas-bg);
+            cursor: default;
+        }
+
+        .canvas-elements {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform-origin: 0 0;
+        }
+
+        .canvas-element {
+            position: absolute;
+            border: 2px solid transparent;
+            cursor: move;
+            user-select: none;
+            box-sizing: border-box;
+        }
+
+        .canvas-element:hover {
+            border-color: var(--canvas-primary);
+        }
+
+        .canvas-element.selected {
+            border-color: var(--canvas-primary);
+            box-shadow: 0 0 0 1px var(--canvas-primary);
+        }
+
+        .text-element {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: transparent;
+            resize: none;
+            outline: none;
+            font-family: inherit;
+            padding: 4px;
+            box-sizing: border-box;
+            color: var(--canvas-text);
+        }
+
+        .shape-element {
+            border-radius: 4px;
+        }
+
+        .shape-element.shape-circle {
+            border-radius: 50%;
+        }
+
+        .image-element {
+            overflow: hidden;
+            border-radius: 4px;
+        }
+
+        .image-element img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 4px;
+            pointer-events: none;
+        }
+
+        .document-element {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: var(--canvas-panel-bg);
+            border: 1px solid var(--canvas-border);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+            color: var(--canvas-text);
+        }
+
+        .document-icon {
+            font-size: 32px;
+            color: var(--canvas-primary);
+            margin-bottom: 8px;
+        }
+
+        .document-name {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            word-break: break-word;
+        }
+
+        .document-size {
+            font-size: 10px;
+            color: var(--canvas-secondary);
+        }
+
+        .properties-panel {
+            width: 280px;
+            background: var(--canvas-panel-bg);
+            border-left: 1px solid var(--canvas-border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .properties-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--canvas-border);
+        }
+
+        .properties-header h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--canvas-text);
+        }
+
+        .properties-content {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        .property-group {
+            margin-bottom: 16px;
+        }
+
+        .property-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--canvas-text);
+            margin-bottom: 6px;
+        }
+
+        .property-input {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid var(--canvas-border);
+            border-radius: 4px;
+            font-size: 12px;
+            background: var(--canvas-input-bg);
+            color: var(--canvas-text);
+        }
+
+        .property-input:focus {
+            outline: none;
+            border-color: var(--canvas-primary);
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+
+        /* Enhanced Chat Panel Styles */
+        .chat-panel {
+            position: fixed;
+            right: -350px;
+            top: 0;
+            width: 350px;
+            height: 100vh;
+            background: var(--canvas-panel-bg);
+            border-left: 1px solid var(--canvas-border);
+            display: flex;
+            flex-direction: column;
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1001;
+            box-shadow: -8px 0 24px var(--canvas-shadow);
+        }
+
+        .chat-panel.open {
+            right: 0;
+        }
+
+        .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--canvas-border);
+            background: var(--canvas-panel-bg);
+            min-height: 60px;
+        }
+
+        .chat-header h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--canvas-text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chat-close-btn {
+            background: transparent;
+            border: 1px solid var(--canvas-border);
+            color: var(--canvas-text);
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 14px;
+        }
+
+        .chat-close-btn:hover {
+            background: var(--canvas-hover);
+            border-color: var(--canvas-primary);
+            color: var(--canvas-primary);
+            transform: scale(1.05);
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: var(--canvas-bg);
+            scroll-behavior: smooth;
+        }
+
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: var(--canvas-hover);
+            border-radius: 3px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: var(--canvas-border);
+            border-radius: 3px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: var(--canvas-secondary);
+        }
+
+        .chat-message {
+            margin-bottom: 16px;
+            animation: messageSlideIn 0.3s ease-out;
+        }
+
+        @keyframes messageSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .chat-message.own {
+            text-align: right;
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+            font-size: 11px;
+            color: var(--canvas-secondary);
+            font-weight: 500;
+        }
+
+        .chat-message.own .message-header {
+            flex-direction: row-reverse;
+        }
+
+        .message-author {
+            font-weight: 600;
+        }
+
+        .message-content {
+            background: var(--canvas-hover);
+            padding: 10px 14px;
+            border-radius: 16px;
+            display: inline-block;
+            max-width: 85%;
+            word-wrap: break-word;
+            color: var(--canvas-text);
+            font-size: 14px;
+            line-height: 1.4;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .chat-message.own .message-content {
+            background: var(--canvas-primary);
+            color: white;
+            border-bottom-right-radius: 6px;
+        }
+
+        .chat-message:not(.own) .message-content {
+            border-bottom-left-radius: 6px;
+        }
+
+        .chat-input {
+            display: flex;
+            gap: 12px;
+            padding: 16px 20px;
+            border-top: 1px solid var(--canvas-border);
+            background: var(--canvas-panel-bg);
+            align-items: flex-end;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid var(--canvas-border);
+            border-radius: 24px;
+            outline: none;
+            background: var(--canvas-input-bg);
+            color: var(--canvas-text);
+            font-size: 14px;
+            resize: none;
+            min-height: 20px;
+            max-height: 100px;
+            transition: border-color 0.2s ease;
+        }
+
+        .chat-input input:focus {
+            border-color: var(--canvas-primary);
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+        }
+
+        .chat-input input::placeholder {
+            color: var(--canvas-secondary);
+        }
+
+        .chat-input button {
+            background: var(--canvas-primary);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 16px;
+        }
+
+        .chat-input button:hover {
+            background: #0056b3;
+            transform: scale(1.05);
+        }
+
+        .chat-input button:active {
+            transform: scale(0.95);
+        }
+
+        .chat-toggle-btn {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            width: 56px;
+            height: 56px;
+            background: var(--canvas-primary);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
+            z-index: 1000;
+            transition: all 0.3s;
+        }
+
+        .chat-toggle-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .chat-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background: #dc3545;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        /* Shape Selection Overlay */
+        .shape-selection-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .shape-selection-modal {
+            background: var(--canvas-panel-bg);
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .shape-selection-modal h3 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: var(--canvas-text);
+        }
+
+        .shape-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .shape-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            padding: 20px;
+            border: 2px solid var(--canvas-border);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: var(--canvas-bg);
+        }
+
+        .shape-item:hover {
+            border-color: var(--canvas-primary);
+            background: var(--canvas-hover);
+            transform: translateY(-2px);
+        }
+
+        .shape-preview {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .shape-preview.rectangle {
+            background: #007bff;
+            border-radius: 6px;
+        }
+
+        .shape-preview.circle {
+            background: #28a745;
+            border-radius: 50%;
+        }
+
+        .shape-preview.triangle {
+            width: 0;
+            height: 0;
+            border-left: 25px solid transparent;
+            border-right: 25px solid transparent;
+            border-bottom: 43px solid #ffc107;
+        }
+
+        .shape-preview.diamond {
+            background: #dc3545;
+            transform: rotate(45deg);
+            border-radius: 6px;
+        }
+
+        .shape-preview.arrow {
+            background: #6f42c1;
+            border-radius: 6px;
+            position: relative;
+        }
+
+        .shape-preview.arrow::after {
+            content: '';
+            position: absolute;
+            right: -8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-left: 8px solid #6f42c1;
+            border-top: 8px solid transparent;
+            border-bottom: 8px solid transparent;
+        }
+
+        .shape-preview.line {
+            width: 50px;
+            height: 3px;
+            background: #17a2b8;
+            border-radius: 2px;
+        }
+
+        .shape-name {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--canvas-text);
+        }
+
+        .context-menu {
+            position: fixed;
+            background: var(--canvas-panel-bg);
+            border: 1px solid var(--canvas-border);
+            border-radius: 6px;
+            box-shadow: 0 4px 12px var(--canvas-shadow);
+            z-index: 1002;
+            display: none;
+            min-width: 160px;
+        }
+
+        .context-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+            color: var(--canvas-text);
+        }
+
+        .context-item:hover {
+            background: var(--canvas-hover);
+        }
+
+        .drag-over {
+            background: rgba(0, 123, 255, 0.1) !important;
+        }
+
+        @media (max-width: 768px) {
+            .properties-panel {
+                display: none;
+            }
+            
+            .canvas-toolbar {
+                flex-wrap: wrap;
+                gap: 4px;
+            }
+            
+            .toolbar-group {
+                padding: 0 4px;
+            }
+            
+            .tool-btn {
+                width: 32px;
+                height: 32px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="canvas-container">
+        <!-- Canvas Header -->
+        <div class="canvas-header">
+            <div class="canvas-header-left">
+                <a href="{{ url_for('projects.view', project_id=project.id) }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Project
+                </a>
+                <h1 class="canvas-title" contenteditable="true" id="canvas-title">{{ canvas.title }}</h1>
+                <div class="auto-save-indicator" id="save-indicator">
+                    <i class="fas fa-circle" id="save-status"></i>
+                    <span id="save-text">Saved</span>
+                </div>
+            </div>
+            
+            <div class="canvas-header-right">
+                <button class="btn btn-sm btn-outline-secondary" id="theme-toggle" title="Toggle Dark Mode">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button class="btn btn-sm btn-primary" id="share-btn">
+                    <i class="fas fa-share"></i> Share
+                </button>
+            </div>
+        </div>
+
+        <!-- Canvas Toolbar -->
+        <div class="canvas-toolbar">
+            <div class="toolbar-group">
+                <button class="tool-btn active" data-tool="select" title="Select (V)" id="select-tool">
+                    <i class="fas fa-mouse-pointer"></i>
+                </button>
+                <button class="tool-btn" data-tool="text" title="Text (T)" id="text-tool">
+                    <i class="fas fa-font"></i>
+                </button>
+                <button class="tool-btn" data-tool="shape" title="Shapes (S)" id="shape-tool">
+                    <i class="fas fa-shapes"></i>
+                </button>
+            </div>
+            
+            <div class="toolbar-group">
+                <button class="tool-btn" data-tool="image" title="Image (I)" id="image-tool">
+                    <i class="fas fa-image"></i>
+                </button>
+                <button class="tool-btn" data-tool="document" title="Document (D)" id="document-tool">
+                    <i class="fas fa-file"></i>
+                </button>
+                <input type="file" id="file-upload" style="display: none;" accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.gif,.ppt,.pptx,.xls,.xlsx" multiple>
+            </div>
+            
+            <div class="toolbar-group">
+                <button class="tool-btn" id="undo-btn" title="Undo (Ctrl+Z)">
+                    <i class="fas fa-undo"></i>
+                </button>
+                <button class="tool-btn" id="redo-btn" title="Redo (Ctrl+Y)">
+                    <i class="fas fa-redo"></i>
+                </button>
+            </div>
+            
+            <div class="toolbar-group">
+                <button class="tool-btn" id="zoom-out" title="Zoom Out (Ctrl+-)">
+                    <i class="fas fa-search-minus"></i>
+                </button>
+                <span class="zoom-level" id="zoom-level">100%</span>
+                <button class="tool-btn" id="zoom-in" title="Zoom In (Ctrl++)">
+                    <i class="fas fa-search-plus"></i>
+                </button>
+                <button class="tool-btn" id="zoom-fit" title="Zoom to Fit">
+                    <i class="fas fa-expand"></i>
+                </button>
+            </div>
+
+            <div class="toolbar-group">
+                <button class="tool-btn" id="save-btn" title="Save (Ctrl+S)">
+                    <i class="fas fa-save"></i>
+                </button>
+            </div>
+
+            
+
+            
+        </div>
+
+        
+
+        <!-- Main Canvas Area -->
+        <div class="canvas-main">
+            <!-- Canvas Workspace -->
+            <div class="canvas-workspace" id="canvas-workspace">
+                <div class="canvas-elements" id="canvas-elements"></div>
+            </div>
+
+            <!-- Properties Panel -->
+            <div class="properties-panel" id="properties-panel">
+                <div class="properties-header">
+                    <h3>Properties</h3>
+                </div>
+                <div class="properties-content" id="properties-content">
+                    <p class="text-muted">Select an element to edit properties</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Panel -->
+    <div class="chat-panel" id="chat-panel">
+        <div class="chat-header">
+            <h3><i class="fas fa-comments"></i> Team Chat</h3>
+            <button class="chat-close-btn" id="chat-close-btn" title="Close Chat">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-input">
+            <input type="text" id="message-input" placeholder="Type a message..." maxlength="500">
+            <button class="btn btn-primary" id="send-message" title="Send Message">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Chat Toggle Button -->
+    <button class="chat-toggle-btn" id="chat-toggle-btn">
+        <i class="fas fa-comments"></i>
+        <span class="chat-badge" id="chat-badge">0</span>
+    </button>
+
+    <!-- Shape Selection Overlay -->
+    <div class="shape-selection-overlay" id="shape-selection-overlay">
+        <div class="shape-selection-modal">
+            <h3>Choose a Shape</h3>
+            <div class="shape-grid">
+                <div class="shape-item" data-shape="rectangle">
+                    <div class="shape-preview rectangle"></div>
+                    <span class="shape-name">Rectangle</span>
+                </div>
+                <div class="shape-item" data-shape="circle">
+                    <div class="shape-preview circle"></div>
+                    <span class="shape-name">Circle</span>
+                </div>
+                <div class="shape-item" data-shape="triangle">
+                    <div class="shape-preview triangle"></div>
+                    <span class="shape-name">Triangle</span>
+                </div>
+                <div class="shape-item" data-shape="diamond">
+                    <div class="shape-preview diamond"></div>
+                    <span class="shape-name">Diamond</span>
+                </div>
+                <div class="shape-item" data-shape="arrow">
+                    <div class="shape-preview arrow"></div>
+                    <span class="shape-name">Arrow</span>
+                </div>
+                <div class="shape-item" data-shape="line">
+                    <div class="shape-preview line"></div>
+                    <span class="shape-name">Line</span>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="cancelShapeSelection()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Context Menu -->
+    <div class="context-menu" id="context-menu">
+        <div class="context-item" data-action="copy">
+            <i class="fas fa-copy"></i> Copy
+        </div>
+        <div class="context-item" data-action="paste">
+            <i class="fas fa-paste"></i> Paste
+        </div>
+        <div class="context-item" data-action="delete">
+            <i class="fas fa-trash"></i> Delete
+        </div>
+        <div class="context-item" data-action="duplicate">
+            <i class="fas fa-clone"></i> Duplicate
+        </div>
+        <hr>
+        <div class="context-item" data-action="bring-front">
+            <i class="fas fa-layer-group"></i> Bring to Front
+        </div>
+        <div class="context-item" data-action="send-back">
+            <i class="fas fa-layer-group"></i> Send to Back
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Socket.IO -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+    <!-- Hidden data -->
+    <script>
+        window.canvasData = {
+            canvasId: {{ canvas.id }},
+            projectId: {{ project.id }},
+            currentUser: {
+                id: {{ current_user.id }},
+                name: "{{ current_user.get_full_name() }}"
+            },
+            teamMembers: {{ team_members | tojson | safe }},
+            userRole: "{{ user_role }}",
+            userPermissions: {{ user_permissions | tojson | safe }}
+        };
+    </script>
+
+    <script>
+        // Enhanced Canvas Core with Working File Upload
+        class CanvasCore {
+            constructor() {
+                this.canvasId = window.canvasData.canvasId;
+                this.currentUser = window.canvasData.currentUser;
+                this.elements = new Map();
+                this.selectedElements = new Set();
+                this.currentTool = 'select';
+                this.zoom = 1;
+                this.pan = { x: 0, y: 0 };
+                this.isDragging = false;
+                this.isPanning = false;
+                this.dragStart = { x: 0, y: 0 };
+                this.panStart = { x: 0, y: 0 };
+                this.clipboard = null;
+                this.history = [];
+                this.historyIndex = -1;
+                this.maxHistory = 50;
+                this.virtualSize = 5000;
+                this.pendingElementPosition = null;
+                
+                // Initialize Socket.IO for real-time collaboration
+                this.socket = io();
+                this.setupSocketEvents();
+                
+                this.init();
+            }
+
+            init() {
+                console.log('Initializing Canvas Core...');
+                
+                this.workspace = document.getElementById('canvas-workspace');
+                this.elementsContainer = document.getElementById('canvas-elements');
+                this.propertiesPanel = document.getElementById('properties-panel');
+                this.propertiesContent = document.getElementById('properties-content');
+                this.fileUpload = document.getElementById('file-upload');
+                
+                if (!this.workspace || !this.elementsContainer) {
+                    console.error('Canvas elements not found!');
+                    return;
+                }
+                
+                // Set workspace size
+                this.workspace.style.width = this.virtualSize + 'px';
+                this.workspace.style.height = this.virtualSize + 'px';
+                
+                this.setupEventListeners();
+                this.setupKeyboardShortcuts();
+                this.setupFileUpload();
+                this.setupDragAndDrop();
+                this.setupThemeToggle();
+                this.loadCanvas();
+                this.saveToHistory();
+                this.setupContextMenu();
+                
+                // Join canvas room for real-time collaboration
+                this.socket.emit('join_canvas', { canvas_id: this.canvasId });
+                
+                console.log('Canvas Core initialized successfully');
+            }
+
+            setupSocketEvents() {
+                // Canvas update events
+                this.socket.on('canvas_update', (data) => {
+                    console.log('Received canvas update:', data);
+                    this.handleRemoteCanvasUpdate(data);
+                });
+
+                // Chat events
+                this.socket.on('new_chat_message', (data) => {
+                    if (window.canvasChat) {
+                        window.canvasChat.handleRemoteMessage(data);
+                    }
+                });
+            }
+
+            handleRemoteCanvasUpdate(data) {
+                switch (data.action) {
+                    case 'element_added':
+                        this.handleRemoteElementAdded(data.element_data);
+                        break;
+                    case 'element_updated':
+                        this.handleRemoteElementUpdated(data.element_data);
+                        break;
+                    case 'element_deleted':
+                        this.handleRemoteElementDeleted(data.element_data);
+                        break;
+                    case 'element_moved':
+                        this.handleRemoteElementMoved(data.element_data);
+                        break;
+                }
+            }
+
+            handleRemoteElementAdded(elementData) {
+                if (!this.elements.has(elementData.id)) {
+                    this.addElementFromData(elementData, false);
+                }
+            }
+
+            handleRemoteElementUpdated(elementData) {
+                const existingElement = document.querySelector(`[data-element-id="${elementData.id}"]`);
+                if (existingElement) {
+                    this.updateElementFromData(existingElement, elementData);
+                }
+            }
+
+            handleRemoteElementDeleted(elementData) {
+                const element = document.querySelector(`[data-element-id="${elementData.id}"]`);
+                if (element) {
+                    element.remove();
+                    this.elements.delete(elementData.id);
+                }
+            }
+
+            handleRemoteElementMoved(elementData) {
+                const element = document.querySelector(`[data-element-id="${elementData.id}"]`);
+                if (element) {
+                    element.style.left = elementData.x + 'px';
+                    element.style.top = elementData.y + 'px';
+                    
+                    const data = this.elements.get(elementData.id);
+                    if (data) {
+                        data.x = elementData.x;
+                        data.y = elementData.y;
+                    }
+                }
+            }
+
+            broadcastCanvasUpdate(action, elementData) {
+                this.socket.emit('canvas_update', {
+                    canvas_id: this.canvasId,
+                    action: action,
+                    element_data: elementData
+                });
+            }
+
+            setupThemeToggle() {
+                const themeToggle = document.getElementById('theme-toggle');
+                if (themeToggle) {
+                    const currentTheme = localStorage.getItem('canvas-theme') || 'light';
+                    document.documentElement.setAttribute('data-theme', currentTheme);
+                    
+                    const icon = themeToggle.querySelector('i');
+                    icon.className = currentTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+                    
+                    themeToggle.addEventListener('click', () => {
+                        const current = document.documentElement.getAttribute('data-theme') || 'light';
+                        const newTheme = current === 'light' ? 'dark' : 'light';
+                        
+                        document.documentElement.setAttribute('data-theme', newTheme);
+                        localStorage.setItem('canvas-theme', newTheme);
+                        
+                        icon.className = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+                        
+                        console.log('Theme switched to:', newTheme);
+                    });
+                }
+            }
+
+            setupEventListeners() {
+                console.log('Setting up event listeners...');
+                
+                // Tool selection
+                document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const tool = e.currentTarget.dataset.tool;
+                        console.log('Tool clicked:', tool);
+                        this.setTool(tool);
+                    });
+                });
+
+                // Canvas interactions
+                this.workspace.addEventListener('mousedown', this.handleMouseDown.bind(this));
+                this.workspace.addEventListener('mousemove', this.handleMouseMove.bind(this));
+                this.workspace.addEventListener('mouseup', this.handleMouseUp.bind(this));
+                this.workspace.addEventListener('click', this.handleCanvasClick.bind(this));
+
+                // Zoom controls
+                const zoomInBtn = document.getElementById('zoom-in');
+                const zoomOutBtn = document.getElementById('zoom-out');
+                const zoomFitBtn = document.getElementById('zoom-fit');
+                
+                if (zoomInBtn) zoomInBtn.addEventListener('click', () => this.zoomIn());
+                if (zoomOutBtn) zoomOutBtn.addEventListener('click', () => this.zoomOut());
+                if (zoomFitBtn) zoomFitBtn.addEventListener('click', () => this.zoomToFit());
+
+                // Undo/Redo
+                const undoBtn = document.getElementById('undo-btn');
+                const redoBtn = document.getElementById('redo-btn');
+                
+                if (undoBtn) undoBtn.addEventListener('click', () => this.undo());
+                if (redoBtn) redoBtn.addEventListener('click', () => this.redo());
+
+                // Save
+                const saveBtn = document.getElementById('save-btn');
+                if (saveBtn) saveBtn.addEventListener('click', () => this.saveCanvas());
+
+                // Context menu
+                this.workspace.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    this.showContextMenu(e.clientX, e.clientY);
+                });
+
+                document.addEventListener('click', () => {
+                    const contextMenu = document.getElementById('context-menu');
+                    if (contextMenu) contextMenu.style.display = 'none';
+                });
+
+                // Context menu actions
+                const contextMenu = document.getElementById('context-menu');
+                if (contextMenu) {
+                    contextMenu.addEventListener('click', (e) => {
+                        const action = e.target.closest('.context-item')?.dataset.action;
+                        if (action) {
+                            this.handleContextAction(action);
+                        }
+                    });
+                }
+
+                // Shape selection
+                document.querySelectorAll('.shape-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        if (this.pendingElementPosition) {
+                            this.createShapeElement(this.pendingElementPosition.x, this.pendingElementPosition.y, item.dataset.shape);
+                            this.pendingElementPosition = null;
+                        }
+                        this.cancelShapeSelection();
+                    });
+                });
+
+                console.log('Event listeners setup complete');
+            }
+
+            setupKeyboardShortcuts() {
+                document.addEventListener('keydown', (e) => {
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                        return;
+                    }
+
+                    if (e.ctrlKey || e.metaKey) {
+                        switch (e.key.toLowerCase()) {
+                            case 'z':
+                                e.preventDefault();
+                                if (e.shiftKey) {
+                                    this.redo();
+                                } else {
+                                    this.undo();
+                                }
+                                break;
+                            case 'y':
+                                e.preventDefault();
+                                this.redo();
+                                break;
+                            case 'c':
+                                e.preventDefault();
+                                this.copySelected();
+                                break;
+                            case 'v':
+                                e.preventDefault();
+                                this.paste();
+                                break;
+                            case 'a':
+                                e.preventDefault();
+                                this.selectAll();
+                                break;
+                            case 's':
+                                e.preventDefault();
+                                this.saveCanvas();
+                                break;
+                        }
+                    } else {
+                        switch (e.key.toLowerCase()) {
+                            case 'v':
+                                this.setTool('select');
+                                break;
+                            case 't':
+                                this.setTool('text');
+                                break;
+                            case 's':
+                                this.setTool('shape');
+                                break;
+                            case 'i':
+                                this.setTool('image');
+                                break;
+                            case 'd':
+                                this.setTool('document');
+                                break;
+                            case 'delete':
+                            case 'backspace':
+                                e.preventDefault();
+                                this.deleteSelected();
+                                break;
+                            case 'escape':
+                                this.clearSelection();
+                                this.setTool('select');
+                                this.cancelShapeSelection();
+                                break;
+                        }
+                    }
+                });
+            }
+
+            setupFileUpload() {
+                if (this.fileUpload) {
+                    this.fileUpload.addEventListener('change', (e) => {
+                        const files = Array.from(e.target.files);
+                        if (files.length > 0) {
+                            this.handleFileUpload(files);
+                        }
+                        e.target.value = '';
+                    });
+                }
+            }
+
+            setupDragAndDrop() {
+                this.workspace.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    this.workspace.classList.add('drag-over');
+                });
+
+                this.workspace.addEventListener('dragleave', (e) => {
+                    if (!this.workspace.contains(e.relatedTarget)) {
+                        this.workspace.classList.remove('drag-over');
+                    }
+                });
+
+                this.workspace.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    this.workspace.classList.remove('drag-over');
+
+                    const files = Array.from(e.dataTransfer.files);
+                    if (files.length > 0) {
+                        const rect = this.workspace.getBoundingClientRect();
+                        const x = ((e.clientX - rect.left) - this.pan.x) / this.zoom;
+                        const y = ((e.clientY - rect.top) - this.pan.y) / this.zoom;
+
+                        this.handleFileUpload(files, { x, y });
+                    }
+                });
+            }
+
+            setTool(tool) {
+                console.log('Setting tool to:', tool);
+                this.currentTool = tool;
+
+                // Update UI
+                document.querySelectorAll('.tool-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                const toolBtn = document.querySelector(`[data-tool="${tool}"]`);
+                if (toolBtn) {
+                    toolBtn.classList.add('active');
+                }
+
+                // Update cursor
+                this.updateCursor();
+            }
+
+            updateCursor() {
+                const cursors = {
+                    select: 'default',
+                    text: 'text',
+                    shape: 'crosshair',
+                    image: 'crosshair',
+                    document: 'crosshair'
+                };
+
+                this.workspace.style.cursor = cursors[this.currentTool] || 'default';
+            }
+
+            handleMouseDown(e) {
+                if (e.target === this.workspace || e.target === this.elementsContainer) {
+                    this.isDragging = true;
+                    this.dragStart = { x: e.clientX, y: e.clientY };
+
+                    if (this.currentTool === 'select') {
+                        this.startSelection(e);
+                    }
+                }
+            }
+
+            handleMouseMove(e) {
+                if (this.isDragging && this.currentTool === 'select') {
+                    this.updateSelection(e);
+                }
+            }
+
+            handleMouseUp(e) {
+                if (this.isDragging) {
+                    this.isDragging = false;
+                    this.endSelection();
+                }
+            }
+
+            handleCanvasClick(e) {
+                if (e.target === this.workspace || e.target === this.elementsContainer) {
+                    const rect = this.workspace.getBoundingClientRect();
+                    const x = ((e.clientX - rect.left) - this.pan.x) / this.zoom;
+                    const y = ((e.clientY - rect.top) - this.pan.y) / this.zoom;
+
+                    console.log('Canvas clicked at:', x, y, 'Tool:', this.currentTool);
+
+                    switch (this.currentTool) {
+                        case 'text':
+                            this.createTextElement(x, y);
+                            break;
+                        case 'shape':
+                            this.showShapeSelectionAtPosition(x, y);
+                            break;
+                        case 'image':
+                            this.pendingElementPosition = { x, y };
+                            if (this.fileUpload) this.fileUpload.click();
+                            break;
+                        case 'document':
+                            this.pendingElementPosition = { x, y };
+                            if (this.fileUpload) this.fileUpload.click();
+                            break;
+                        case 'select':
+                            this.clearSelection();
+                            break;
+                    }
+                }
+            }
+
+            showShapeSelectionAtPosition(x, y) {
+                this.pendingElementPosition = { x, y };
+                const overlay = document.getElementById('shape-selection-overlay');
+                overlay.style.display = 'flex';
+            }
+
+            cancelShapeSelection() {
+                const overlay = document.getElementById('shape-selection-overlay');
+                overlay.style.display = 'none';
+                this.pendingElementPosition = null;
+                this.setTool('select');
+            }
+
+            async handleFileUpload(files, position = null) {
+                console.log('Handling file upload:', files.length, 'files');
+
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const formData = new FormData();
+                    formData.append('file', file);
+
+                    try {
+                        const response = await fetch(`/canvas/api/canvas/${this.canvasId}/upload`, {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            let x, y;
+                            if (position) {
+                                x = position.x + (i * 20);
+                                y = position.y + (i * 20);
+                            } else if (this.pendingElementPosition) {
+                                x = this.pendingElementPosition.x + (i * 20);
+                                y = this.pendingElementPosition.y + (i * 20);
+                            } else {
+                                const rect = this.workspace.getBoundingClientRect();
+                                x = ((rect.width / 2) - this.pan.x) / this.zoom;
+                                y = ((rect.height / 2) - this.pan.y) / this.zoom;
+                            }
+
+                            if (file.type.startsWith('image/')) {
+                                this.createImageElement(x, y, data.url, data.original_filename);
+                            } else {
+                                this.createDocumentElement(x, y, {
+                                    filename: data.filename,
+                                    original_filename: data.original_filename,
+                                    file_type: data.file_type,
+                                    file_size: data.file_size,
+                                    url: data.url
+                                });
+                            }
+                        } else {
+                            console.error('Upload failed:', data.message);
+                            alert('Upload failed: ' + data.message);
+                        }
+                    } catch (error) {
+                        console.error('Upload error:', error);
+                        alert('Upload failed: ' + error.message);
+                    }
+                }
+
+                this.pendingElementPosition = null;
+                this.setTool('select');
+            }
+
+            createTextElement(x, y) {
+                console.log('Creating text element at:', x, y);
+
+                const element = {
+                    id: this.generateId(),
+                    type: 'text',
+                    x: x,
+                    y: y,
+                    width: 200,
+                    height: 50,
+                    content: 'Double click to edit',
+                    style: {
+                        fontSize: '16px',
+                        fontFamily: 'Arial, sans-serif',
+                        color: '#333333',
+                        textAlign: 'left',
+                        fontWeight: 'normal'
+                    },
+                    zIndex: this.getNextZIndex()
+                };
+
+                this.addElement(element);
+                this.saveToHistory();
+                this.setTool('select');
+                
+                this.broadcastCanvasUpdate('element_added', element);
+            }
+
+            createShapeElement(x, y, shapeType) {
+                console.log('Creating shape element:', shapeType, 'at:', x, y);
+
+                const shapes = {
+                    rectangle: { width: 150, height: 100 },
+                    circle: { width: 100, height: 100 },
+                    triangle: { width: 100, height: 87 },
+                    diamond: { width: 100, height: 100 },
+                    arrow: { width: 120, height: 60 },
+                    line: { width: 150, height: 2 }
+                };
+
+                const shapeConfig = shapes[shapeType] || shapes.rectangle;
+
+                const element = {
+                    id: this.generateId(),
+                    type: 'shape',
+                    x: x,
+                    y: y,
+                    width: shapeConfig.width,
+                    height: shapeConfig.height,
+                    content: { shapeType: shapeType },
+                    style: {
+                        backgroundColor: this.getShapeColor(shapeType),
+                        borderRadius: shapeType === 'circle' ? '50%' : '4px'
+                    },
+                    zIndex: this.getNextZIndex()
+                };
+
+                this.addElement(element);
+                this.saveToHistory();
+                
+                this.broadcastCanvasUpdate('element_added', element);
+            }
+
+            getShapeColor(shapeType) {
+                const colors = {
+                    rectangle: '#007bff',
+                    circle: '#28a745',
+                    triangle: '#ffc107',
+                    diamond: '#dc3545',
+                    arrow: '#6f42c1',
+                    line: '#17a2b8'
+                };
+                return colors[shapeType] || '#007bff';
+            }
+
+            createImageElement(x, y, src, alt) {
+                console.log('Creating image element at:', x, y, 'src:', src);
+
+                const element = {
+                    id: this.generateId(),
+                    type: 'image',
+                    x: x,
+                    y: y,
+                    width: 200,
+                    height: 150,
+                    content: { src: src, alt: alt },
+                    style: {},
+                    zIndex: this.getNextZIndex()
+                };
+
+                this.addElement(element);
+                this.saveToHistory();
+                
+                this.broadcastCanvasUpdate('element_added', element);
+            }
+
+            createDocumentElement(x, y, fileData) {
+                console.log('Creating document element at:', x, y, 'fileData:', fileData);
+
+                const element = {
+                    id: this.generateId(),
+                    type: 'document',
+                    x: x,
+                    y: y,
+                    width: 200,
+                    height: 120,
+                    content: {
+                        fileName: fileData.original_filename,
+                        fileType: fileData.file_type,
+                        fileSize: fileData.file_size,
+                        url: fileData.url
+                    },
+                    style: {},
+                    zIndex: this.getNextZIndex()
+                };
+
+                this.addElement(element);
+                this.saveToHistory();
+                
+                this.broadcastCanvasUpdate('element_added', element);
+            }
+
+            addElement(elementData, broadcast = true) {
+                console.log('Adding element:', elementData);
+
+                const element = this.createElement(elementData);
+                this.elements.set(elementData.id, elementData);
+                this.elementsContainer.appendChild(element);
+
+                this.autoSave();
+            }
+
+            addElementFromData(elementData, broadcast = true) {
+                const element = this.createElement(elementData);
+                this.elements.set(elementData.id, elementData);
+                this.elementsContainer.appendChild(element);
+            }
+
+            createElement(data) {
+                const element = document.createElement('div');
+                element.className = 'canvas-element';
+                element.dataset.elementId = data.id;
+                element.style.left = data.x + 'px';
+                element.style.top = data.y + 'px';
+                element.style.width = data.width + 'px';
+                element.style.height = data.height + 'px';
+                element.style.zIndex = data.zIndex || 1;
+
+                switch (data.type) {
+                    case 'text':
+                        this.createTextContent(element, data);
+                        break;
+                    case 'shape':
+                        this.createShapeContent(element, data);
+                        break;
+                    case 'image':
+                        this.createImageContent(element, data);
+                        break;
+                    case 'document':
+                        this.createDocumentContent(element, data);
+                        break;
+                }
+
+                this.addElementEventListeners(element);
+
+                return element;
+            }
+
+            createTextContent(element, data) {
+                const textArea = document.createElement('textarea');
+                textArea.className = 'text-element';
+                textArea.value = data.content;
+                textArea.style.fontSize = data.style.fontSize || '16px';
+                textArea.style.fontFamily = data.style.fontFamily || 'Arial, sans-serif';
+                textArea.style.color = data.style.color || '#333333';
+                textArea.style.textAlign = data.style.textAlign || 'left';
+                textArea.style.fontWeight = data.style.fontWeight || 'normal';
+
+                textArea.addEventListener('input', () => {
+                    data.content = textArea.value;
+                    this.autoSave();
+                    
+                    this.broadcastCanvasUpdate('element_updated', data);
+                });
+
+                textArea.addEventListener('dblclick', (e) => {
+                    e.stopPropagation();
+                    textArea.focus();
+                    textArea.select();
+                });
+
+                element.appendChild(textArea);
+            }
+
+            createShapeContent(element, data) {
+                element.className += ` shape-element shape-${data.content.shapeType}`;
+                element.style.backgroundColor = data.style.backgroundColor;
+                element.style.borderRadius = data.style.borderRadius;
+            }
+
+            createImageContent(element, data) {
+                const img = document.createElement('img');
+                img.src = data.content.src;
+                img.alt = data.content.alt || 'Canvas Image';
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'cover';
+                img.style.borderRadius = '4px';
+                img.draggable = false;
+
+                img.onerror = () => {
+                    console.error('Failed to load image:', data.content.src);
+                    img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgdmlld0JveD0iMCAwIDIwMCAxNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTUwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBkPSJNODUgNzVINzVWNjVIODVWNzVaTTEyNSA3NUgxMTVWNjVIMTI1Vjc1WiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K';
+                };
+
+                element.className += ' image-element';
+                element.appendChild(img);
+            }
+
+            createDocumentContent(element, data) {
+                element.className += ' document-element';
+
+                const icon = document.createElement('div');
+                icon.className = 'document-icon';
+                icon.innerHTML = this.getDocumentIcon(data.content.fileType);
+
+                const name = document.createElement('div');
+                name.className = 'document-name';
+                name.textContent = data.content.fileName;
+
+                const size = document.createElement('div');
+                size.className = 'document-size';
+                size.textContent = this.formatFileSize(data.content.fileSize);
+
+                element.appendChild(icon);
+                element.appendChild(name);
+                element.appendChild(size);
+
+                element.addEventListener('click', (e) => {
+                    if (this.currentTool === 'select' && !this.isDragging) {
+                        window.open(data.content.url, '_blank');
+                    }
+                });
+            }
+
+            getDocumentIcon(fileType) {
+                const icons = {
+                    pdf: '<i class="fas fa-file-pdf"></i>',
+                    doc: '<i class="fas fa-file-word"></i>',
+                    docx: '<i class="fas fa-file-word"></i>',
+                    xls: '<i class="fas fa-file-excel"></i>',
+                    xlsx: '<i class="fas fa-file-excel"></i>',
+                    ppt: '<i class="fas fa-file-powerpoint"></i>',
+                    pptx: '<i class="fas fa-file-powerpoint"></i>',
+                    txt: '<i class="fas fa-file-alt"></i>'
+                };
+                return icons[fileType] || '<i class="fas fa-file"></i>';
+            }
+
+            formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            addElementEventListeners(element) {
+                let isDragging = false;
+                let dragStart = { x: 0, y: 0 };
+                let elementStart = { x: 0, y: 0 };
+
+                element.addEventListener('mousedown', (e) => {
+                    e.stopPropagation();
+
+                    if (this.currentTool === 'select') {
+                        isDragging = true;
+                        dragStart = { x: e.clientX, y: e.clientY };
+                        elementStart = {
+                            x: parseInt(element.style.left),
+                            y: parseInt(element.style.top)
+                        };
+
+                        this.selectElement(element);
+                    }
+                });
+
+                const handleMouseMove = (e) => {
+                    if (isDragging && this.currentTool === 'select') {
+                        const dx = (e.clientX - dragStart.x) / this.zoom;
+                        const dy = (e.clientY - dragStart.y) / this.zoom;
+
+                        const newX = elementStart.x + dx;
+                        const newY = elementStart.y + dy;
+
+                        element.style.left = newX + 'px';
+                        element.style.top = newY + 'px';
+
+                        const elementData = this.elements.get(element.dataset.elementId);
+                        if (elementData) {
+                            elementData.x = newX;
+                            elementData.y = newY;
+                            
+                            this.broadcastCanvasUpdate('element_moved', {
+                                id: elementData.id,
+                                x: newX,
+                                y: newY
+                            });
+                        }
+                    }
+                };
+
+                const handleMouseUp = () => {
+                    if (isDragging) {
+                        isDragging = false;
+                        this.autoSave();
+                        this.saveToHistory();
+                        document.removeEventListener('mousemove', handleMouseMove);
+                        document.removeEventListener('mouseup', handleMouseUp);
+                    }
+                };
+
+                document.addEventListener('mousemove', handleMouseMove);
+                document.addEventListener('mouseup', handleMouseUp);
+
+                element.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (this.currentTool === 'select') {
+                        this.selectElement(element);
+                    }
+                });
+            }
+
+            selectElement(element) {
+                if (!event.ctrlKey && !event.metaKey) {
+                    this.clearSelection();
+                }
+
+                element.classList.add('selected');
+                this.selectedElements.add(element.dataset.elementId);
+
+                this.updatePropertiesPanel();
+                
+                this.socket.emit('element_select', {
+                    canvas_id: this.canvasId,
+                    element_id: element.dataset.elementId
+                });
+            }
+
+            clearSelection() {
+                document.querySelectorAll('.canvas-element.selected').forEach(el => {
+                    el.classList.remove('selected');
+                });
+                this.selectedElements.clear();
+                this.updatePropertiesPanel();
+            }
+
+            updatePropertiesPanel() {
+                if (!this.propertiesContent) return;
+
+                if (this.selectedElements.size === 0) {
+                    this.propertiesContent.innerHTML = '<p class="text-muted">Select an element to edit properties</p>';
+                    return;
+                }
+
+                if (this.selectedElements.size === 1) {
+                    const elementId = Array.from(this.selectedElements)[0];
+                    const elementData = this.elements.get(elementId);
+                    if (elementData) {
+                        this.showElementProperties(elementData);
+                    }
+                } else {
+                    this.propertiesContent.innerHTML = `<p class="text-muted">${this.selectedElements.size} elements selected</p>`;
+                }
+            }
+
+            showElementProperties(elementData) {
+                let html = `
+                    <div class="property-group">
+                        <label class="property-label">Position</label>
+                        <div class="row">
+                            <div class="col-6">
+                                <input type="number" class="property-input" data-property="x" value="${Math.round(elementData.x)}" placeholder="X">
+                            </div>
+                            <div class="col-6">
+                                <input type="number" class="property-input" data-property="y" value="${Math.round(elementData.y)}" placeholder="Y">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="property-group">
+                        <label class="property-label">Size</label>
+                        <div class="row">
+                            <div class="col-6">
+                                <input type="number" class="property-input" data-property="width" value="${Math.round(elementData.width)}" placeholder="Width">
+                            </div>
+                            <div class="col-6">
+                                <input type="number" class="property-input" data-property="height" value="${Math.round(elementData.height)}" placeholder="Height">
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                if (elementData.type === 'text') {
+                    html += `
+                        <div class="property-group">
+                            <label class="property-label">Font Size</label>
+                            <input type="number" class="property-input" data-property="fontSize" value="${parseInt(elementData.style.fontSize)}" min="8" max="72">
+                        </div>
+                        <div class="property-group">
+                            <label class="property-label">Font Family</label>
+                            <select class="property-input" data-property="fontFamily">
+                                <option value="Arial, sans-serif" ${elementData.style.fontFamily === 'Arial, sans-serif' ? 'selected' : ''}>Arial</option>
+                                <option value="Georgia, serif" ${elementData.style.fontFamily === 'Georgia, serif' ? 'selected' : ''}>Georgia</option>
+                                <option value="'Times New Roman', serif" ${elementData.style.fontFamily === "'Times New Roman', serif" ? 'selected' : ''}>Times New Roman</option>
+                                <option value="'Courier New', monospace" ${elementData.style.fontFamily === "'Courier New', monospace" ? 'selected' : ''}>Courier New</option>
+                            </select>
+                        </div>
+                        <div class="property-group">
+                            <label class="property-label">Text Color</label>
+                            <input type="color" class="property-input" data-property="color" value="${elementData.style.color}">
+                        </div>
+                    `;
+                } else if (elementData.type === 'shape') {
+                    html += `
+                        <div class="property-group">
+                            <label class="property-label">Background Color</label>
+                            <input type="color" class="property-input" data-property="backgroundColor" value="${elementData.style.backgroundColor}">
+                        </div>
+                    `;
+                }
+
+                this.propertiesContent.innerHTML = html;
+
+                this.propertiesContent.querySelectorAll('.property-input').forEach(input => {
+                    input.addEventListener('input', (e) => {
+                        this.updateElementProperty(elementData, e.target.dataset.property, e.target.value);
+                    });
+                });
+            }
+
+            updateElementProperty(elementData, property, value) {
+                const element = document.querySelector(`[data-element-id="${elementData.id}"]`);
+                if (!element) return;
+
+                if (['x', 'y', 'width', 'height'].includes(property)) {
+                    elementData[property] = parseFloat(value);
+                    element.style[property === 'x' ? 'left' : property === 'y' ? 'top' : property] = value + 'px';
+                } else if (property === 'fontSize') {
+                    elementData.style.fontSize = value + 'px';
+                    const textElement = element.querySelector('.text-element');
+                    if (textElement) {
+                        textElement.style.fontSize = value + 'px';
+                    }
+                } else if (property === 'fontFamily') {
+                    elementData.style.fontFamily = value;
+                    const textElement = element.querySelector('.text-element');
+                    if (textElement) {
+                        textElement.style.fontFamily = value;
+                    }
+                } else if (property === 'color') {
+                    elementData.style.color = value;
+                    const textElement = element.querySelector('.text-element');
+                    if (textElement) {
+                        textElement.style.color = value;
+                    }
+                } else if (property === 'backgroundColor') {
+                    elementData.style.backgroundColor = value;
+                    element.style.backgroundColor = value;
+                }
+
+                this.autoSave();
+                
+                this.broadcastCanvasUpdate('element_updated', elementData);
+            }
+
+            updateElementFromData(element, elementData) {
+                element.style.left = elementData.x + 'px';
+                element.style.top = elementData.y + 'px';
+                element.style.width = elementData.width + 'px';
+                element.style.height = elementData.height + 'px';
+                
+                const localData = this.elements.get(elementData.id);
+                if (localData) {
+                    Object.assign(localData, elementData);
+                }
+            }
+
+            // Zoom functionality
+            zoomIn() {
+                this.zoom = Math.min(this.zoom * 1.2, 5);
+                this.updateZoom();
+            }
+
+            zoomOut() {
+                this.zoom = Math.max(this.zoom / 1.2, 0.1);
+                this.updateZoom();
+            }
+
+            zoomToFit() {
+                if (this.elements.size === 0) {
+                    this.zoom = 1;
+                    this.updateZoom();
+                    return;
+                }
+
+                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+                this.elements.forEach(element => {
+                    minX = Math.min(minX, element.x);
+                    minY = Math.min(minY, element.y);
+                    maxX = Math.max(maxX, element.x + element.width);
+                    maxY = Math.max(maxY, element.y + element.height);
+                });
+
+                const padding = 50;
+                const contentWidth = maxX - minX + padding * 2;
+                const contentHeight = maxY - minY + padding * 2;
+
+                const scaleX = this.workspace.offsetWidth / contentWidth;
+                const scaleY = this.workspace.offsetHeight / contentHeight;
+
+                this.zoom = Math.min(scaleX, scaleY, 1);
+                this.updateZoom();
+            }
+
+            updateZoom() {
+                this.elementsContainer.style.transform = `scale(${this.zoom})`;
+                const zoomLevel = document.getElementById('zoom-level');
+                if (zoomLevel) {
+                    zoomLevel.textContent = Math.round(this.zoom * 100) + '%';
+                }
+            }
+
+            // History management
+            saveToHistory() {
+                const state = this.getCanvasState();
+
+                this.history = this.history.slice(0, this.historyIndex + 1);
+
+                this.history.push(JSON.stringify(state));
+                this.historyIndex++;
+
+                if (this.history.length > this.maxHistory) {
+                    this.history.shift();
+                    this.historyIndex--;
+                }
+            }
+
+            undo() {
+                if (this.historyIndex > 0) {
+                    this.historyIndex--;
+                    const state = JSON.parse(this.history[this.historyIndex]);
+                    this.restoreCanvasState(state);
+                }
+            }
+
+            redo() {
+                if (this.historyIndex < this.history.length - 1) {
+                    this.historyIndex++;
+                    const state = JSON.parse(this.history[this.historyIndex]);
+                    this.restoreCanvasState(state);
+                }
+            }
+
+            getCanvasState() {
+                const elements = [];
+                this.elements.forEach((data, id) => {
+                    elements.push({ ...data });
+                });
+                return { elements };
+            }
+
+            restoreCanvasState(state) {
+                this.elementsContainer.innerHTML = '';
+                this.elements.clear();
+                this.clearSelection();
+
+                state.elements.forEach(elementData => {
+                    this.addElementFromData(elementData, false);
+                });
+            }
+
+            setupContextMenu() {
+                // Handled in event listeners
+            }
+
+            showContextMenu(x, y) {
+                const contextMenu = document.getElementById('context-menu');
+                if (contextMenu) {
+                    contextMenu.style.display = 'block';
+                    contextMenu.style.left = x + 'px';
+                    contextMenu.style.top = y + 'px';
+                }
+            }
+
+            handleContextAction(action) {
+                switch (action) {
+                    case 'copy':
+                        this.copySelected();
+                        break;
+                    case 'paste':
+                        this.paste();
+                        break;
+                    case 'delete':
+                        this.deleteSelected();
+                        break;
+                    case 'duplicate':
+                        this.duplicateSelected();
+                        break;
+                    case 'bring-front':
+                        this.bringToFront();
+                        break;
+                    case 'send-back':
+                        this.sendToBack();
+                        break;
+                }
+            }
+
+            copySelected() {
+                if (this.selectedElements.size > 0) {
+                    const selectedData = [];
+                    this.selectedElements.forEach(id => {
+                        selectedData.push({ ...this.elements.get(id) });
+                    });
+                    this.clipboard = selectedData;
+                    console.log('Copied', selectedData.length, 'elements');
+                }
+            }
+
+            paste() {
+                if (this.clipboard) {
+                    this.clearSelection();
+                    this.clipboard.forEach(data => {
+                        const newData = { ...data };
+                        newData.id = this.generateId();
+                        newData.x += 20;
+                        newData.y += 20;
+                        newData.zIndex = this.getNextZIndex();
+                        this.addElement(newData);
+
+                        const element = document.querySelector(`[data-element-id="${newData.id}"]`);
+                        if (element) {
+                            element.classList.add('selected');
+                            this.selectedElements.add(newData.id);
+                        }
+                        
+                        this.broadcastCanvasUpdate('element_added', newData);
+                    });
+                    this.saveToHistory();
+                    this.updatePropertiesPanel();
+                }
+            }
+
+            deleteSelected() {
+                if (this.selectedElements.size > 0) {
+                    this.selectedElements.forEach(id => {
+                        const element = document.querySelector(`[data-element-id="${id}"]`);
+                        if (element) {
+                            element.remove();
+                        }
+                        this.elements.delete(id);
+                        
+                        this.broadcastCanvasUpdate('element_deleted', { id: id });
+                    });
+                    this.clearSelection();
+                    this.autoSave();
+                    this.saveToHistory();
+                }
+            }
+
+            duplicateSelected() {
+                this.copySelected();
+                this.paste();
+            }
+
+            bringToFront() {
+                const maxZ = this.getNextZIndex();
+                this.selectedElements.forEach(id => {
+                    const element = document.querySelector(`[data-element-id="${id}"]`);
+                    const data = this.elements.get(id);
+                    if (element && data) {
+                        data.zIndex = maxZ;
+                        element.style.zIndex = maxZ;
+                        
+                        this.broadcastCanvasUpdate('element_updated', data);
+                    }
+                });
+                this.autoSave();
+            }
+
+            sendToBack() {
+                this.selectedElements.forEach(id => {
+                    const element = document.querySelector(`[data-element-id="${id}"]`);
+                    const data = this.elements.get(id);
+                    if (element && data) {
+                        data.zIndex = 1;
+                        element.style.zIndex = 1;
+                        
+                        this.broadcastCanvasUpdate('element_updated', data);
+                    }
+                });
+                this.autoSave();
+            }
+
+            selectAll() {
+                this.clearSelection();
+                document.querySelectorAll('.canvas-element').forEach(element => {
+                    element.classList.add('selected');
+                    this.selectedElements.add(element.dataset.elementId);
+                });
+                this.updatePropertiesPanel();
+            }
+
+            async loadCanvas() {
+                try {
+                    const response = await fetch(`/canvas/api/canvas/${this.canvasId}/load`);
+                    const data = await response.json();
+                    if (data.success && data.content && data.content.elements) {
+                        this.restoreCanvasState(data.content);
+                        console.log('Canvas loaded with', data.content.elements.length, 'elements');
+                    }
+                } catch (error) {
+                    console.error('Failed to load canvas:', error);
+                }
+            }
+
+            async saveCanvas() {
+                try {
+                    this.updateSaveStatus('saving');
+                    const canvasData = this.getCanvasState();
+
+                    const response = await fetch(`/canvas/api/canvas/${this.canvasId}/save`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            content: canvasData
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        this.updateSaveStatus('saved');
+                        console.log('Canvas saved successfully');
+                    } else {
+                        this.updateSaveStatus('error');
+                        console.error('Save failed:', result.message);
+                        alert('Save failed: ' + result.message);
+                    }
+                } catch (error) {
+                    this.updateSaveStatus('error');
+                    console.error('Save error:', error);
+                    alert('Save failed: ' + error.message);
+                }
+            }
+
+            autoSave() {
+                clearTimeout(this.autoSaveTimeout);
+                this.updateSaveStatus('saving');
+                this.autoSaveTimeout = setTimeout(() => {
+                    this.saveCanvas();
+                }, 2000);
+            }
+
+            updateSaveStatus(status) {
+                const indicator = document.getElementById('save-indicator');
+                const statusIcon = document.getElementById('save-status');
+                const statusText = document.getElementById('save-text');
+
+                if (!indicator || !statusIcon || !statusText) return;
+
+                indicator.classList.remove('saving', 'error');
+
+                switch (status) {
+                    case 'saving':
+                        indicator.classList.add('saving');
+                        statusText.textContent = 'Saving...';
+                        break;
+                    case 'saved':
+                        statusText.textContent = 'Saved';
+                        break;
+                    case 'error':
+                        indicator.classList.add('error');
+                        statusText.textContent = 'Save failed';
+                        break;
+                }
+            }
+
+            startSelection(e) {
+                this.selectionBox = document.createElement('div');
+                this.selectionBox.className = 'selection-box';
+                this.selectionBox.style.position = 'fixed';
+                this.selectionBox.style.border = '1px dashed var(--canvas-primary)';
+                this.selectionBox.style.background = 'rgba(0, 123, 255, 0.1)';
+                this.selectionBox.style.pointerEvents = 'none';
+                this.selectionBox.style.zIndex = '999';
+                this.selectionBox.style.left = e.clientX + 'px';
+                this.selectionBox.style.top = e.clientY + 'px';
+                this.selectionBox.style.width = '0px';
+                this.selectionBox.style.height = '0px';
+                document.body.appendChild(this.selectionBox);
+
+                this.selectionStart = { x: e.clientX, y: e.clientY };
+            }
+
+            updateSelection(e) {
+                if (!this.selectionBox) return;
+
+                const left = Math.min(this.selectionStart.x, e.clientX);
+                const top = Math.min(this.selectionStart.y, e.clientY);
+                const width = Math.abs(e.clientX - this.selectionStart.x);
+                const height = Math.abs(e.clientY - this.selectionStart.y);
+
+                this.selectionBox.style.left = left + 'px';
+                this.selectionBox.style.top = top + 'px';
+                this.selectionBox.style.width = width + 'px';
+                this.selectionBox.style.height = height + 'px';
+
+                this.highlightElementsInSelection(left, top, width, height);
+            }
+
+            endSelection() {
+                if (this.selectionBox) {
+                    this.selectionBox.remove();
+                    this.selectionBox = null;
+                }
+                this.updatePropertiesPanel();
+            }
+
+            highlightElementsInSelection(left, top, width, height) {
+                const selectionRect = { left, top, right: left + width, bottom: top + height };
+
+                document.querySelectorAll('.canvas-element').forEach(element => {
+                    const elementRect = element.getBoundingClientRect();
+
+                    if (this.rectsIntersect(selectionRect, elementRect)) {
+                        element.classList.add('selected');
+                        this.selectedElements.add(element.dataset.elementId);
+                    } else if (!event.ctrlKey && !event.metaKey) {
+                        element.classList.remove('selected');
+                        this.selectedElements.delete(element.dataset.elementId);
+                    }
+                });
+            }
+
+            rectsIntersect(rect1, rect2) {
+                return !(rect1.right < rect2.left || 
+                        rect1.left > rect2.right || 
+                        rect1.bottom < rect2.top || 
+                        rect1.top > rect2.bottom);
+            }
+
+            generateId() {
+                return 'element_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            }
+
+            getNextZIndex() {
+                let maxZ = 0;
+                this.elements.forEach(element => {
+                    maxZ = Math.max(maxZ, element.zIndex || 1);
+                });
+                return maxZ + 1;
+            }
+        }
+
+        // Enhanced Canvas Chat with Close Button
+        class CanvasChat {
+            constructor() {
+                this.canvasId = window.canvasData.canvasId;
+                this.currentUser = window.canvasData.currentUser;
+                this.messages = [];
+                this.isOpen = false;
+                this.unreadCount = 0;
+                this.socket = io();
+
+                this.init();
+            }
+
+            init() {
+                this.chatPanel = document.getElementById('chat-panel');
+                this.chatMessages = document.getElementById('chat-messages');
+                this.messageInput = document.getElementById('message-input');
+                this.sendButton = document.getElementById('send-message');
+                this.chatToggleBtn = document.getElementById('chat-toggle-btn');
+                this.chatBadge = document.getElementById('chat-badge');
+                this.chatCloseBtn = document.getElementById('chat-close-btn');
+
+                this.setupEventListeners();
+                this.loadMessages();
+
+                setInterval(() => {
+                    this.loadMessages();
+                }, 10000);
+
+                console.log('Canvas Chat initialized');
+            }
+
+            setupEventListeners() {
+                if (this.sendButton) {
+                    this.sendButton.addEventListener('click', () => {
+                        this.sendMessage();
+                    });
+                }
+
+                if (this.messageInput) {
+                    this.messageInput.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            this.sendMessage();
+                        }
+                    });
+                }
+
+                if (this.chatCloseBtn) {
+                    this.chatCloseBtn.addEventListener('click', () => {
+                        console.log('Chat close button clicked');
+                        this.toggleChat();
+                    });
+                }
+
+                if (this.chatToggleBtn) {
+                    this.chatToggleBtn.addEventListener('click', () => {
+                        console.log('Chat toggle button clicked');
+                        this.toggleChat();
+                    });
+                }
+            }
+
+            toggleChat() {
+                this.isOpen = !this.isOpen;
+
+                if (this.isOpen) {
+                    this.chatPanel.classList.add('open');
+                    this.chatToggleBtn.style.display = 'none';
+                    this.unreadCount = 0;
+                    this.updateBadge();
+                    this.scrollToBottom();
+                    if (this.messageInput) this.messageInput.focus();
+                } else {
+                    this.chatPanel.classList.remove('open');
+                    this.chatToggleBtn.style.display = 'flex';
+                }
+            }
+
+            async sendMessage() {
+                if (!this.messageInput) return;
+                
+                const message = this.messageInput.value.trim();
+                if (!message) return;
+
+                try {
+                    const response = await fetch(`/canvas/api/canvas/${this.canvasId}/chat/messages`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            message: message,
+                            message_type: 'text'
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        this.messageInput.value = '';
+                        this.addMessage(result.message);
+                        this.scrollToBottom();
+                        
+                        this.socket.emit('chat_message', {
+                            canvas_id: this.canvasId,
+                            message: result.message.message,
+                            timestamp: result.message.created_at
+                        });
+                    } else {
+                        console.error('Failed to send message:', result.message);
+                        alert('Failed to send message: ' + result.message);
+                    }
+                } catch (error) {
+                    console.error('Error sending message:', error);
+                    alert('Error sending message: ' + error.message);
+                }
+            }
+
+            handleRemoteMessage(messageData) {
+                if (messageData.user_id !== this.currentUser.id) {
+                    this.addMessage({
+                        id: Date.now(),
+                        user_id: messageData.user_id,
+                        user_name: messageData.user_name,
+                        message: messageData.message,
+                        created_at: messageData.timestamp
+                    });
+                    
+                    if (!this.isOpen) {
+                        this.unreadCount++;
+                        this.updateBadge();
+                    }
+                    
+                    if (this.isOpen) {
+                        this.scrollToBottom();
+                    }
+                }
+            }
+
+            async loadMessages() {
+                try {
+                    const response = await fetch(`/canvas/api/canvas/${this.canvasId}/chat/messages`);
+                    const result = await response.json();
+
+                    if (result.success) {
+                        const newMessages = result.messages.filter(msg => 
+                            !this.messages.find(existing => existing.id === msg.id)
+                        );
+
+                        newMessages.forEach(message => {
+                            this.addMessage(message);
+
+                            if (message.user_id !== this.currentUser.id && !this.isOpen) {
+                                this.unreadCount++;
+                            }
+                        });
+
+                        this.updateBadge();
+
+                        if (newMessages.length > 0 && this.isOpen) {
+                            this.scrollToBottom();
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading messages:', error);
+                }
+            }
+
+            addMessage(messageData) {
+                if (this.messages.find(msg => msg.id === messageData.id)) {
+                    return;
+                }
+
+                this.messages.push(messageData);
+
+                if (this.chatMessages) {
+                    const messageElement = this.createMessageElement(messageData);
+                    this.chatMessages.appendChild(messageElement);
+                }
+            }
+
+            createMessageElement(messageData) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `chat-message ${messageData.user_id === this.currentUser.id ? 'own' : 'other'}`;
+
+                const headerDiv = document.createElement('div');
+                headerDiv.className = 'message-header';
+
+                const authorSpan = document.createElement('span');
+                authorSpan.className = 'message-author';
+                authorSpan.textContent = messageData.user_name || 'Unknown User';
+
+                const timeSpan = document.createElement('span');
+                timeSpan.className = 'message-time';
+                timeSpan.textContent = this.formatTime(messageData.created_at);
+
+                headerDiv.appendChild(authorSpan);
+                headerDiv.appendChild(timeSpan);
+
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'message-content';
+                contentDiv.textContent = messageData.message;
+
+                messageDiv.appendChild(headerDiv);
+                messageDiv.appendChild(contentDiv);
+
+                return messageDiv;
+            }
+
+            formatTime(timestamp) {
+                const date = new Date(timestamp);
+                const now = new Date();
+                const diff = now - date;
+
+                if (diff < 60000) {
+                    return 'Just now';
+                } else if (diff < 3600000) {
+                    const minutes = Math.floor(diff / 60000);
+                    return `${minutes}m ago`;
+                } else if (diff < 86400000) {
+                    const hours = Math.floor(diff / 3600000);
+                    return `${hours}h ago`;
+                } else {
+                    return date.toLocaleDateString();
+                }
+            }
+
+            updateBadge() {
+                if (this.chatBadge) {
+                    if (this.unreadCount > 0) {
+                        this.chatBadge.textContent = this.unreadCount > 99 ? '99+' : this.unreadCount;
+                        this.chatBadge.style.display = 'flex';
+                    } else {
+                        this.chatBadge.style.display = 'none';
+                    }
+                }
+            }
+
+            scrollToBottom() {
+                if (this.chatMessages) {
+                    requestAnimationFrame(() => {
+                        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+                    });
+                }
+            }
+        }
+
+        // Global functions for shape selection
+        function cancelShapeSelection() {
+            if (window.canvasCore) {
+                window.canvasCore.cancelShapeSelection();
+            }
+        }
+
+        // Initialize canvas when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, initializing canvas...');
+            window.canvasCore = new CanvasCore();
+            window.canvasChat = new CanvasChat();
+            
+            console.log('Canvas initialization complete');
+        });
+    </script>
+
+</body>
+</html>

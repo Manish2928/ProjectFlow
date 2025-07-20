@@ -1,0 +1,172 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Projects - Project Management Tool{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">
+            <i class="fas fa-folder me-2"></i>
+            Projects
+        </h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <div class="btn-group me-2">
+                <a href="{{ url_for('projects.create') }}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-plus me-1"></i>
+                    New Project
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-6">
+                    <label for="search" class="form-label">Search</label>
+                    <input type="text" class="form-control" id="search" name="search" value="{{ search }}" placeholder="Search projects...">
+                </div>
+                <div class="col-md-3">
+                    <label for="status" class="form-label">Status</label>
+                    <select class="form-select" id="status" name="status">
+                        <option value="">All Status</option>
+                        <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+                        <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+                        <option value="on_hold" {% if status_filter == 'on_hold' %}selected{% endif %}>On Hold</option>
+                        <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-search"></i>
+                        Filter
+                    </button>
+                    <a href="{{ url_for('projects.index') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i>
+                        Clear
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Projects Grid -->
+    {% if projects.items %}
+        <div class="row g-4">
+            {% for project in projects.items %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title">
+                                <a href="{{ url_for('projects.view', project_id=project.id) }}" class="text-decoration-none">
+                                    {{ project.title }}
+                                </a>
+                            </h5>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{{ url_for('projects.view', project_id=project.id) }}">View</a></li>
+                                    {% if current_user.is_admin() or project.created_by == current_user.id %}
+                                    <li><a class="dropdown-item" href="{{ url_for('projects.edit', project_id=project.id) }}">Edit</a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('projects.create_task', project_id=project.id) }}">Add Task</a></li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <p class="card-text text-muted">
+                            {{ project.description[:100] }}{% if project.description|length > 100 %}...{% endif %}
+                        </p>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <small class="text-muted">Progress</small>
+                                <small class="text-muted">{{ project.progress }}%</small>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar" role="progressbar" style="width: {{ project.progress }}%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="badge bg-{{ 'success' if project.status == 'completed' else 'primary' if project.status == 'active' else 'warning' if project.status == 'on_hold' else 'secondary' }}">
+                                    {{ project.status.replace('_', ' ').title() }}
+                                </span>
+                                <span class="badge bg-{{ 'danger' if project.priority == 'urgent' else 'warning' if project.priority == 'high' else 'info' if project.priority == 'medium' else 'secondary' }}">
+                                    {{ project.priority.title() }}
+                                </span>
+                            </div>
+                            <small class="text-muted">
+                                {{ project.get_completed_tasks() }}/{{ project.get_task_count() }} tasks
+                            </small>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                Created {{ project.created_at.strftime('%m/%d/%Y') }}
+                            </small>
+                            <small class="text-muted">
+                                by {{ project.creator.get_full_name() }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Pagination -->
+        {% if projects.pages > 1 %}
+        <nav aria-label="Projects pagination" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if projects.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('projects.index', page=projects.prev_num, search=search, status=status_filter) }}">Previous</a>
+                </li>
+                {% endif %}
+                
+                {% for page_num in projects.iter_pages() %}
+                    {% if page_num %}
+                        {% if page_num != projects.page %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('projects.index', page=page_num, search=search, status=status_filter) }}">{{ page_num }}</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                        {% endif %}
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if projects.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('projects.index', page=projects.next_num, search=search, status=status_filter) }}">Next</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No projects found</h5>
+            <p class="text-muted">Try adjusting your search filters or create a new project.</p>
+            <a href="{{ url_for('projects.create') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>
+                Create Project
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

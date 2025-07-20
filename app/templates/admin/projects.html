@@ -1,0 +1,303 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Admin - Projects Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">
+            <i class="fas fa-project-diagram me-2"></i>
+            Projects Management
+        </h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <div class="btn-group me-2">
+                <a href="{{ url_for('admin.dashboard') }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    Back to Dashboard
+                </a>
+                <a href="{{ url_for('projects.create') }}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-plus me-1"></i>
+                    Create Project
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filter Section -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-4">
+                    <label for="search" class="form-label">Search Projects</label>
+                    <input type="text" class="form-control" id="search" name="search" 
+                           value="{{ search }}" placeholder="Search by project title...">
+                </div>
+                <div class="col-md-3">
+                    <label for="status" class="form-label">Status Filter</label>
+                    <select class="form-select" id="status" name="status">
+                        <option value="">All Statuses</option>
+                        <option value="active" {{ 'selected' if status_filter == 'active' }}>Active</option>
+                        <option value="completed" {{ 'selected' if status_filter == 'completed' }}>Completed</option>
+                        <option value="on_hold" {{ 'selected' if status_filter == 'on_hold' }}>On Hold</option>
+                        <option value="cancelled" {{ 'selected' if status_filter == 'cancelled' }}>Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-search me-1"></i>
+                        Filter
+                    </button>
+                    <a href="{{ url_for('admin.projects') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-1"></i>
+                        Clear
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Projects Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-list me-2"></i>
+                All Projects ({{ projects.total }} total)
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if projects.items %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Project</th>
+                                <th>Created By</th>
+                                <th>Status</th>
+                                <th>Priority</th>
+                                <th>Progress</th>
+                                <th>Members</th>
+                                <th>Tasks</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for project in projects.items %}
+                            <tr>
+                                <td>
+                                    <div>
+                                        <strong>{{ project.title }}</strong>
+                                        {% if project.description %}
+                                        <br><small class="text-muted">{{ project.description[:100] }}{% if project.description|length > 100 %}...{% endif %}</small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div>
+                                            <div class="fw-bold">{{ project.creator.get_full_name() }}</div>
+                                            <small class="text-muted">{{ project.creator.email }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if project.status == 'completed' else 'primary' if project.status == 'active' else 'warning' if project.status == 'on_hold' else 'secondary' }}">
+                                        {{ project.status.replace('_', ' ').title() }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'danger' if project.priority == 'urgent' else 'warning' if project.priority == 'high' else 'info' if project.priority == 'medium' else 'secondary' }}">
+                                        {{ project.priority.title() }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar" role="progressbar" style="width: {{ project.progress }}%" 
+                                             aria-valuenow="{{ project.progress }}" aria-valuemin="0" aria-valuemax="100">
+                                            {{ project.progress }}%
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">{{ project.members|length }} members</span>
+                                </td>
+                                <td>
+                                    <div class="text-center">
+                                        <small class="text-muted">{{ project.get_completed_tasks() }}/{{ project.get_task_count() }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <small>{{ project.created_at.strftime('%m/%d/%Y') }}</small>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('projects.view', project_id=project.id) }}" 
+                                           class="btn btn-outline-primary" title="View Project">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ url_for('canvas.project_canvas', project_id=project.id) }}" 
+                                           class="btn btn-outline-success" title="Open Canvas">
+                                            <i class="fas fa-paint-brush"></i>
+                                        </a>
+                                        <a href="{{ url_for('projects.edit', project_id=project.id) }}" 
+                                           class="btn btn-outline-warning" title="Edit Project">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-outline-danger" 
+                                                onclick="confirmDelete({{ project.id }}, '{{ project.title }}')" title="Delete Project">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if projects.pages > 1 %}
+                <nav aria-label="Projects pagination" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if projects.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('admin.projects', page=projects.prev_num, search=search, status=status_filter) }}">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        {% for page_num in projects.iter_pages() %}
+                            {% if page_num %}
+                                {% if page_num != projects.page %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('admin.projects', page=page_num, search=search, status=status_filter) }}">{{ page_num }}</a>
+                                </li>
+                                {% else %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page_num }}</span>
+                                </li>
+                                {% endif %}
+                            {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if projects.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('admin.projects', page=projects.next_num, search=search, status=status_filter) }}">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-project-diagram fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No projects found</h5>
+                    {% if search or status_filter %}
+                    <p class="text-muted">Try adjusting your search criteria or filters.</p>
+                    <a href="{{ url_for('admin.projects') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-times me-1"></i>
+                        Clear Filters
+                    </a>
+                    {% else %}
+                    <p class="text-muted">No projects have been created yet.</p>
+                    <a href="{{ url_for('projects.create') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>
+                        Create First Project
+                    </a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">
+                    <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+                    Confirm Delete
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the project <strong id="projectName"></strong>?</p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    This action cannot be undone. All project data, tasks, and canvas content will be permanently deleted.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                    <i class="fas fa-trash me-1"></i>
+                    Delete Project
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let projectToDelete = null;
+
+function confirmDelete(projectId, projectTitle) {
+    projectToDelete = projectId;
+    document.getElementById('projectName').textContent = projectTitle;
+    
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+
+document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+    if (!projectToDelete) return;
+    
+    this.disabled = true;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Deleting...';
+    
+    fetch(`/projects/${projectToDelete}/delete`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            Utils.showToast('Project deleted successfully!', 'success');
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            Utils.showToast('Error deleting project: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        Utils.showToast('Error deleting project.', 'error');
+    })
+    .finally(() => {
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-trash me-1"></i> Delete Project';
+        bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+    });
+});
+
+// Auto-submit form on filter change
+document.getElementById('status').addEventListener('change', function() {
+    this.form.submit();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,187 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Project Members - {{ project.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">
+            <i class="fas fa-users me-2"></i>
+            Project Members
+        </h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <div class="btn-group me-2">
+                <a href="{{ url_for('projects.view', project_id=project.id) }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    Back to Project
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Project Info -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">{{ project.title }}</h5>
+            <p class="card-text">{{ project.description or 'No description available.' }}</p>
+        </div>
+    </div>
+    
+    <!-- Current Members -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-users me-2"></i>
+                Current Members ({{ members|length }})
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if members %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Member</th>
+                                <th>Role</th>
+                                <th>Permissions</th>
+                                <th>Joined</th>
+                                {% if current_user.is_admin() or project.created_by == current_user.id %}
+                                <th>Actions</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for member in members %}
+                            <tr id="member-{{ member.id }}">
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm bg-light rounded-circle d-flex align-items-center justify-content-center me-3">
+                                            <i class="fas fa-user text-muted"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold">{{ member.user.get_full_name() }}</div>
+                                            <small class="text-muted">{{ member.user.email }}</small>
+                                            {% if member.user.department %}
+                                            <br><small class="text-muted">{{ member.user.department }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'danger' if member.role == 'owner' else 'primary' if member.role == 'member' else 'secondary' }}">
+                                        {{ member.role.title() }}
+                                        {% if member.user_id == project.created_by %}(Owner){% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% for permission in member.permissions.split(',') %}
+                                        <span class="badge bg-light text-dark me-1">{{ permission }}</span>
+                                    {% endfor %}
+                                </td>
+                                <td>{{ member.joined_at.strftime('%m/%d/%Y') }}</td>
+                                {% if current_user.is_admin() or project.created_by == current_user.id %}
+                                <td>
+                                    {% if member.user_id != project.created_by %}
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeMember({{ member.id }}, '{{ member.user.get_full_name() }}')">
+                                        <i class="fas fa-user-minus"></i>
+                                        Remove
+                                    </button>
+                                    {% else %}
+                                    <span class="text-muted">Project Owner</span>
+                                    {% endif %}
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No members found.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Pending Invitations -->
+    {% if pending_invitations %}
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-clock me-2"></i>
+                Pending Invitations ({{ pending_invitations|length }})
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Invited User</th>
+                            <th>Role</th>
+                            <th>Invited By</th>
+                            <th>Sent</th>
+                            <th>Message</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invitation in pending_invitations %}
+                        <tr>
+                            <td>
+                                <div>
+                                    <div class="fw-bold">{{ invitation.invitee.get_full_name() }}</div>
+                                    <small class="text-muted">{{ invitation.invitee.email }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ invitation.role.title() }}</span>
+                            </td>
+                            <td>{{ invitation.inviter.get_full_name() }}</td>
+                            <td>{{ invitation.created_at.strftime('%m/%d/%Y') }}</td>
+                            <td>
+                                {% if invitation.message %}
+                                    <small>{{ invitation.message[:50] }}{% if invitation.message|length > 50 %}...{% endif %}</small>
+                                {% else %}
+                                    <span class="text-muted">No message</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function removeMember(memberId, memberName) {
+    if (confirm(`Are you sure you want to remove ${memberName} from this project?`)) {
+        fetch(`/invitations/remove-member/${memberId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById(`member-${memberId}`).remove();
+                Utils.showToast(data.message, 'success');
+            } else {
+                Utils.showToast('Error: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Utils.showToast('An error occurred while removing the member.', 'error');
+        });
+    }
+}
+</script>
+{% endblock %}
