@@ -54,18 +54,18 @@ bash migration/setup_migration.sh
    \`\`\`bash
    # Get your connection string from Supabase Dashboard
    # Settings > Database > Connection string > URI
-   export DATABASE_URL="postgresql://postgres:Mnaish@#361120@db.cmmkhkouwoynhdgqqwzn.supabase.co:5432/postgres"
+   export DATABASE_URL="postgresql://postgres:[YOUR-PASSWORD]@db.xxx.supabase.co:5432/postgres"
    \`\`\`
 
 2. **For Neon**:
    \`\`\`bash
-   export DATABASE_URL="postgresql://postgres:Mnaish@#361120@ep-xxx.us-east-1.aws.neon.tech/neondb"
-   export DATABASE_URL="postgresql://postgres:Mnaish@#361120@db.cmmkhkouwoynhdgqqwzn.supabase.co:5432/postgres"
+   export DATABASE_URL=""
+   export DATABASE_URL=""
    \`\`\`
 
 3. **For local PostgreSQL**:
    \`\`\`bash
-   export DATABASE_URL="postgresql://username:password@localhost:5432/project_management"
+   export DATABASE_URL="postgresql://postgres:[YOUR-PASSWORD]@db.xxx.supabase.co:5432/postgres"
    \`\`\`
 
 ### Step 4: Run Migration
